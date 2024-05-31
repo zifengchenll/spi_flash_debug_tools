@@ -22,10 +22,10 @@ show_help() {
     echo "  single_read_write_check   单扇区读写检查"
     echo "  eeco                      擦除偶数扇区，检查奇数扇区"
     echo "  eoce                      擦除奇数扇区，检查偶数扇区"
-    echo "  debug_help                显示此帮助信息"
+    echo "  help                      显示此帮助信息"
     echo
     echo "选项:"
-    echo "  所有选项将直接传递给 esptool.py"
+    echo "  如果输入的参数命令不存在，则会传递给 esptool.py"
 }
 
 # 默认设置
@@ -62,7 +62,7 @@ elif [ "$1" == "eeco" ]; then
 elif [ "$1" == "eoce" ]; then
     COMMAND="eoce"
     shift
-elif [ "$1" == "debug_help" ]; then
+elif [ "$1" == "help" ]; then
     show_help
     exit 0
 else
@@ -75,8 +75,8 @@ if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ 
 选择错误处理机制:
 ##########################################################\033[0m"
     echo "1) 检测到错误时立即退出"
-    echo "2) 记录错误并继续，然后报告"
-    read -p "请输入你的选择 (1 或 2): " choice
+    echo "2) 检测到错误时继续测试，完成后提供报告"
+    read -p "请输入你的机制 (1 或 2): " choice
 
     if [ "$choice" == "1" ]; then
         ERROR_HANDLING="exit"
