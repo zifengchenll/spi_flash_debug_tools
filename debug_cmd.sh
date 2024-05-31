@@ -19,7 +19,7 @@ Usage: $0 [command] [options]
 ##########################################################\033[0m"
   echo
   echo "Commands:"
-  echo "  neighbor-test          Perform the neighboring channel test"
+  echo "  single_read_write_check          Single sector read and write check"
   echo "  EECO                   Erase Even sector, Check Odd sector VT"
   echo "  EOCE                   Erase Odd sector, Check Even sector VT"
   echo "  debug_help             Show this help message"
@@ -33,9 +33,27 @@ COMMAND=""
 ERROR_SECTORS=()
 ERROR_HANDLING=""
 
+# 捕获 Ctrl+C 信号并打印错误扇区地址
+trap 'print_errors_and_exit' SIGINT
+
+print_errors_and_exit() {
+  if [ ${#ERROR_SECTORS[@]} -ne 0 ]; then
+    echo -e "\033[33m##########################################################
+Interrupt received, recording errors...
+##########################################################\033[0m"
+    echo -e "\033[31m##########################################################
+Errors detected in the following sectors:
+##########################################################\033[0m"
+    for sector in "${ERROR_SECTORS[@]}"; do
+      printf "\033[31mSector: 0x%08X\033[0m\n" $sector
+    done
+  fi
+  exit 1
+}
+
 # 解析参数
-if [ "$1" == "neighbor-test" ]; then
-  COMMAND="neighbor-test"
+if [ "$1" == "single_read_write_check" ]; then
+  COMMAND="single_read_write_check"
   shift
 elif [ "$1" == "EECO" ]; then
   COMMAND="EECO"
@@ -51,7 +69,7 @@ else
 fi
 
 # 对所有测试命令进行询问
-if [ "$COMMAND" == "neighbor-test" ] || [ "$COMMAND" == "EECO" ] || [ "$COMMAND" == "EOCE" ]; then
+if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "EECO" ] || [ "$COMMAND" == "EOCE" ]; then
   echo -e "\033[33m##########################################################
 Select the error handling mechanism:
 ##########################################################\033[0m"
@@ -119,9 +137,9 @@ Error: Unsupported flash size $FLASH_SIZE
   START_ADDR=0x00000
   CHUNK_SIZE=0x1000  # 4K
 
-  if [ "$COMMAND" == "neighbor-test" ]; then
+  if [ "$COMMAND" == "single_read_write_check" ]; then
     echo -e "\033[34m##########################################################
-Starting neighboring channel test
+Starting single_read_write_check channel test
 ##########################################################\033[0m"
 
     # 计算结束地址
@@ -130,17 +148,17 @@ Starting neighboring channel test
     # 逐个4K空间进行擦除、写入和读取数据
     for ((ADDR=START_ADDR; ADDR<END_ADDR; ADDR+=CHUNK_SIZE)); do
       echo -e "\033[34m##########################################################
-Erasing region starting at $ADDR
+Erasing region starting at 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
       python "$ESPTOOL_PATH" erase_region $ADDR $CHUNK_SIZE
 
       echo -e "\033[34m##########################################################
-Writing zero_4k_file to $ADDR
+Writing zero_4k_file to 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
       python "$ESPTOOL_PATH" -p /dev/ttyUSB0 write_flash $ADDR ./flash_bin/zero_4k_file
 
       echo -e "\033[34m##########################################################
-Reading back written data from $ADDR
+Reading back written data from 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
       python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read
 
@@ -149,40 +167,22 @@ Reading back written data from $ADDR
       if [ $? -ne 0 ]; then
         if [ "$ERROR_HANDLING" == "exit" ]; then
           echo -e "\033[31m##########################################################
-Error: Mismatch found at address $ADDR
+Error: Mismatch found at address 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-          exit 1
+          print_errors_and_exit
         else
+          echo -e "\033[33m##########################################################
+Recording error at address 0x$(printf "%08X" $ADDR)
+##########################################################\033[0m"
           ERROR_SECTORS+=("$ADDR")
         fi
       fi
 
-      # 邻道读取（前一个块）
-      if [ $ADDR -ne 0 ]; then
-        PREV_ADDR=$((ADDR - CHUNK_SIZE))
-        echo -e "\033[34m##########################################################
-Reading back neighboring data from $PREV_ADDR
-##########################################################\033[0m"
-        python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $PREV_ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_neighbor
-
-        # 比较前一个块的数据和源数据
-        cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_neighbor
-        if [ $? -ne 0 ]; then
-          if [ "$ERROR_HANDLING" == "exit" ]; then
-            echo -e "\033[31m##########################################################
-Error: Mismatch found at neighboring address $PREV_ADDR
-##########################################################\033[0m"
-            exit 1
-          else
-            ERROR_SECTORS+=("$PREV_ADDR")
-          fi
-        fi
-      fi
     done
 
     # 输出邻道测试模式激活的消息
     echo -e "\033[32m##########################################################
-Neighboring channel test mode: active
+single_read_write_check test mode: active
 ##########################################################\033[0m"
   elif [ "$COMMAND" == "EECO" ] || [ "$COMMAND" == "EOCE" ]; then
     echo -e "\033[34m##########################################################
@@ -206,7 +206,7 @@ Starting EECO test: Erase Even sector, Check Odd sector VT
       # 擦除偶数扇区
       for ((ADDR=START_ADDR; ADDR<END_ADDR; ADDR+=CHUNK_SIZE*2)); do
         echo -e "\033[34m##########################################################
-Erasing even sector starting at $ADDR
+Erasing even sector starting at 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
         python "$ESPTOOL_PATH" erase_region $ADDR $CHUNK_SIZE
       done
@@ -214,7 +214,7 @@ Erasing even sector starting at $ADDR
       # 检查奇数扇区
       for ((ADDR=START_ADDR + CHUNK_SIZE; ADDR<END_ADDR; ADDR+=CHUNK_SIZE*2)); do
         echo -e "\033[34m##########################################################
-Reading back odd sector data from $ADDR
+Reading back odd sector data from 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
         python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_odd
 
@@ -223,10 +223,13 @@ Reading back odd sector data from $ADDR
         if [ $? -ne 0 ]; then
           if [ "$ERROR_HANDLING" == "exit" ]; then
             echo -e "\033[31m##########################################################
-Error: Mismatch found at odd sector address $ADDR
+Error: Mismatch found at odd sector address 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-            exit 1
+            print_errors_and_exit
           else
+            echo -e "\033[33m##########################################################
+Recording error at odd sector address 0x$(printf "%08X" $ADDR)
+##########################################################\033[0m"
             ERROR_SECTORS+=("$ADDR")
           fi
         fi
@@ -247,7 +250,7 @@ Starting EOCE test: Erase Odd sector, Check Even sector VT
       # 擦除奇数扇区
       for ((ADDR=START_ADDR + CHUNK_SIZE; ADDR<END_ADDR; ADDR+=CHUNK_SIZE*2)); do
         echo -e "\033[34m##########################################################
-Erasing odd sector starting at $ADDR
+Erasing odd sector starting at 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
         python "$ESPTOOL_PATH" erase_region $ADDR $CHUNK_SIZE
       done
@@ -255,7 +258,7 @@ Erasing odd sector starting at $ADDR
       # 检查偶数扇区
       for ((ADDR=START_ADDR; ADDR<END_ADDR; ADDR+=CHUNK_SIZE*2)); do
         echo -e "\033[34m##########################################################
-Reading back even sector data from $ADDR
+Reading back even sector data from 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
         python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_even
 
@@ -264,10 +267,13 @@ Reading back even sector data from $ADDR
         if [ $? -ne 0 ]; then
           if [ "$ERROR_HANDLING" == "exit" ]; then
             echo -e "\033[31m##########################################################
-Error: Mismatch found at even sector address $ADDR
+Error: Mismatch found at even sector address 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-            exit 1
+            print_errors_and_exit
           else
+            echo -e "\033[33m##########################################################
+Recording error at even sector address 0x$(printf "%08X" $ADDR)
+##########################################################\033[0m"
             ERROR_SECTORS+=("$ADDR")
           fi
         fi
@@ -286,7 +292,7 @@ EOCE test mode: complete
 Errors detected in the following sectors:
 ##########################################################\033[0m"
     for sector in "${ERROR_SECTORS[@]}"; do
-      echo -e "\033[31mSector: $sector\033[0m"
+      printf "\033[31mSector: 0x%08X\033[0m\n" $sector
     done
   fi
 else
