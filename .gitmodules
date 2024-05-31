@@ -1,0 +1,3 @@
+[submodule "tools/esptool"]
+	path = tools/esptool
+	url = git@github.com:espressif/esptool.git
