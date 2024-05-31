@@ -20,8 +20,8 @@ Usage: $0 [command] [options]
   echo
   echo "Commands:"
   echo "  single_read_write_check          Single sector read and write check"
-  echo "  EECO                   Erase Even sector, Check Odd sector VT"
-  echo "  EOCE                   Erase Odd sector, Check Even sector VT"
+  echo "  eeco                   Erase Even sector, Check Odd sector VT"
+  echo "  eoce                   Erase Odd sector, Check Even sector VT"
   echo "  debug_help             Show this help message"
   echo
   echo "Options:"
@@ -55,11 +55,11 @@ Errors detected in the following sectors:
 if [ "$1" == "single_read_write_check" ]; then
   COMMAND="single_read_write_check"
   shift
-elif [ "$1" == "EECO" ]; then
-  COMMAND="EECO"
+elif [ "$1" == "eeco" ]; then
+  COMMAND="eeco"
   shift
-elif [ "$1" == "EOCE" ]; then
-  COMMAND="EOCE"
+elif [ "$1" == "eoce" ]; then
+  COMMAND="eoce"
   shift
 elif [ "$1" == "debug_help" ]; then
   show_help
@@ -69,7 +69,7 @@ else
 fi
 
 # 对所有测试命令进行询问
-if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "EECO" ] || [ "$COMMAND" == "EOCE" ]; then
+if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ]; then
   echo -e "\033[33m##########################################################
 Select the error handling mechanism:
 ##########################################################\033[0m"
@@ -180,11 +180,11 @@ Recording error at address 0x$(printf "%08X" $ADDR)
 
     done
 
-    # 输出邻道测试模式激活的消息
+    # 输出测试模式激活的消息
     echo -e "\033[32m##########################################################
 single_read_write_check test mode: active
 ##########################################################\033[0m"
-  elif [ "$COMMAND" == "EECO" ] || [ "$COMMAND" == "EOCE" ]; then
+  elif [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ]; then
     echo -e "\033[34m##########################################################
 Erasing entire flash
 ##########################################################\033[0m"
@@ -195,9 +195,9 @@ Writing entire flash with zero data from $ZERO_FILE
 ##########################################################\033[0m"
     python "$ESPTOOL_PATH" -p /dev/ttyUSB0 write_flash $START_ADDR $ZERO_FILE
 
-    if [ "$COMMAND" == "EECO" ]; then
+    if [ "$COMMAND" == "eeco" ]; then
       echo -e "\033[34m##########################################################
-Starting EECO test: Erase Even sector, Check Odd sector VT
+Starting eeco test: Erase Even sector, Check Odd sector VT
 ##########################################################\033[0m"
 
       # 计算结束地址
@@ -237,11 +237,11 @@ Recording error at odd sector address 0x$(printf "%08X" $ADDR)
 
       # 输出 EECO 测试完成消息
       echo -e "\033[32m##########################################################
-EECO test mode: complete
+eeco test mode: complete
 ##########################################################\033[0m"
-    elif [ "$COMMAND" == "EOCE" ]; then
+    elif [ "$COMMAND" == "eoce" ]; then
       echo -e "\033[34m##########################################################
-Starting EOCE test: Erase Odd sector, Check Even sector VT
+Starting eoce test: Erase Odd sector, Check Even sector VT
 ##########################################################\033[0m"
 
       # 计算结束地址
@@ -281,7 +281,7 @@ Recording error at even sector address 0x$(printf "%08X" $ADDR)
 
       # 输出 EOCE 测试完成消息
       echo -e "\033[32m##########################################################
-EOCE test mode: complete
+eoce test mode: complete
 ##########################################################\033[0m"
     fi
   fi
