@@ -13,10 +13,25 @@ fi
 # 默认设置
 NEIGHBOR_TEST_MODE=false
 
+# 帮助信息
+show_help() {
+  echo "Usage: $0 [command] [options]"
+  echo
+  echo "Commands:"
+  echo "  neighbor-test          Perform the neighboring channel test"
+  echo "  debug_help             Show this help message"
+  echo
+  echo "Options:"
+  echo "  Any options will be passed directly to esptool.py"
+}
+
 # 解析参数
 if [ "$1" == "neighbor-test" ]; then
   NEIGHBOR_TEST_MODE=true
   shift
+elif [ "$1" == "debug_help" ]; then
+  show_help
+  exit 0
 else
   REMAINING_ARGS=("$@")
 fi
@@ -61,10 +76,37 @@ if $NEIGHBOR_TEST_MODE; then
   # 计算结束地址
   END_ADDR=$((START_ADDR + SIZE))
 
-  # 逐个4K空间进行擦除
+  # 逐个4K空间进行擦除、写入和读取数据
   for ((ADDR=START_ADDR; ADDR<END_ADDR; ADDR+=CHUNK_SIZE)); do
     echo "Erasing region starting at $ADDR..."
     python "$ESPTOOL_PATH" erase_region $ADDR $CHUNK_SIZE
+
+    echo "Writing zero_4k_file to $ADDR..."
+    python "$ESPTOOL_PATH" -p /dev/ttyUSB0 write_flash $ADDR ./flash_bin/zero_4k_file
+
+    echo "Reading back written data from $ADDR..."
+    python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read
+
+    # 比较写入的数据和读回的数据
+    cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read
+    if [ $? -ne 0 ]; then
+      echo "Error: Mismatch found at address $ADDR"
+      exit 1
+    fi
+
+    # 邻道读取（前一个块）
+    if [ $ADDR -ne 0 ]; then
+      PREV_ADDR=$((ADDR - CHUNK_SIZE))
+      echo "Reading back neighboring data from $PREV_ADDR..."
+      python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $PREV_ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_neighbor
+
+      # 比较前一个块的数据和源数据
+      cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_neighbor
+      if [ $? -ne 0 ]; then
+        echo "Error: Mismatch found at neighboring address $PREV_ADDR"
+        exit 1
+      fi
+    fi
   done
 
   # 输出邻道测试模式激活的消息
