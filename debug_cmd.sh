@@ -25,7 +25,17 @@ show_help() {
     echo "  help                      显示帮助信息"
     echo
     echo "选项:"
-    echo "  如果输入的参数命令不存在，则会传递给 esptool.py"
+    echo
+    echo "说明:如果输入的参数命令不存在，则会传递给 esptool.py"
+    echo "示例:"
+    echo "  flash_id                                                            读取FLASHID"
+    echo "  erase_flash                                                         整片硬存擦除，可以显示擦除耗时"
+    echo "  erase_region 0x20000 0x4000                                         要擦除硬存的某个区域，起始地址是0x20000，长度为0x4000字节"
+    echo "  -p /dev/ttyUSB0 write_flash 0x1000 ./flash_bin/zero_4k_file         将二进制数据通过/dev/ttyUSB0写入硬存，写入地址0x1000开始"
+    echo "  -p /dev/ttyUSB0 -b 460800 read_flash 0 0x200000 flash_contents.bin  将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度0x200000，保存的文件名flash_contents.bin"
+    echo "  -p /dev/ttyUSB0 -b 460800 read_flash 0 ALL flash_contents.bin       将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度硬存容量，保存的文件名flash_contents.bin"
+    echo "  write_flash_status --bytes 2 --non-volatile 0                       --bytes决定了写入多少个状态寄存器字节，分别对应WRSR(01h)，WRSR2(31h)，WRSR3(11h)"
+    echo "  read_flash_status  --bytes 2                                        --bytes决定了读取多少个状态寄存器字节，分别对应RDSR(05h)，RDSR2(35h)，RDSR3(15h)"
 }
 
 # 默认设置
