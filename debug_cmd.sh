@@ -4,6 +4,9 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 ESPTOOL_PATH="$SCRIPT_DIR/tools/esptool/esptool.py"
 
+# 默认串口
+PORT="/dev/ttyUSB0"
+
 # 检查 esptool.py 是否存在
 if [ ! -f "$ESPTOOL_PATH" ]; then
     echo -e "\033[31m##########################################################
@@ -15,16 +18,17 @@ fi
 # 帮助信息
 show_help() {
     echo -e "\033[33m##########################################################
-用法: $0 [命令] [选项]
+用法: $0 [选项] [命令]
 ##########################################################\033[0m"
+    echo
+    echo "选项:"
+    echo "  -p, --port                指定串口设备 (默认: /dev/ttyUSB0)"
     echo
     echo "命令:"
     echo "  single_read_write_check   遍历所有扇区，对每个扇区进行擦除、写入、读取、校验"
     echo "  eeco                      整片硬存擦除，写入全零，擦除偶数扇区，检查奇数扇区"
     echo "  eoce                      整片硬存擦除，写入全零，擦除奇数扇区，检查偶数扇区"
     echo "  help                      显示帮助信息"
-    echo
-    echo "选项:"
     echo
     echo "说明:如果输入的参数命令不存在，则会传递给 esptool.py"
     echo "示例:"
@@ -62,22 +66,24 @@ print_errors_and_exit() {
     exit 1
 }
 
-# 解析参数
-if [ "$1" == "single_read_write_check" ]; then
-    COMMAND="single_read_write_check"
-    shift
-elif [ "$1" == "eeco" ]; then
-    COMMAND="eeco"
-    shift
-elif [ "$1" == "eoce" ]; then
-    COMMAND="eoce"
-    shift
-elif [ "$1" == "help" ]; then
-    show_help
-    exit 0
-else
-    REMAINING_ARGS=("$@")
-fi
+# 解析选项和参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -p|--port)
+            PORT="$2"
+            shift 2
+            ;;
+        single_read_write_check|eeco|eoce|help)
+            COMMAND="$1"
+            shift
+            break
+            ;;
+        *)
+            REMAINING_ARGS=("$@")
+            break
+            ;;
+    esac
+done
 
 # 对所有测试命令进行询问
 if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ]; then
@@ -166,12 +172,12 @@ if [ -n "$COMMAND" ]; then
             echo -e "\033[34m##########################################################
 写入全零文件到 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-            python "$ESPTOOL_PATH" -p /dev/ttyUSB0 write_flash $ADDR ./flash_bin/zero_4k_file
+            python "$ESPTOOL_PATH" -p "$PORT" write_flash $ADDR ./flash_bin/zero_4k_file
 
             echo -e "\033[34m##########################################################
 从 0x$(printf "%08X" $ADDR) 读取数据
 ##########################################################\033[0m"
-            python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read
+            python "$ESPTOOL_PATH" -p "$PORT" read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read
 
             # 比较写入的数据和读回的数据
             cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read
@@ -204,7 +210,7 @@ if [ -n "$COMMAND" ]; then
         echo -e "\033[34m##########################################################
 用全零数据写入整个 Flash
 ##########################################################\033[0m"
-        python "$ESPTOOL_PATH" -p /dev/ttyUSB0 write_flash $START_ADDR $ZERO_FILE
+        python "$ESPTOOL_PATH" -p "$PORT" write_flash $START_ADDR $ZERO_FILE
 
         if [ "$COMMAND" == "eeco" ]; then
             echo -e "\033[34m##########################################################
@@ -227,7 +233,7 @@ if [ -n "$COMMAND" ]; then
                 echo -e "\033[34m##########################################################
 读取奇数扇区数据，地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-                python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_odd
+                python "$ESPTOOL_PATH" -p "$PORT" read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_odd
 
                 # 比较奇数扇区的数据和源数据
                 cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_odd
@@ -271,7 +277,7 @@ EECO 测试模式：完成
                 echo -e "\033[34m##########################################################
 读取偶数扇区数据，地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-                python "$ESPTOOL_PATH" -p /dev/ttyUSB0 read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_even
+                python "$ESPTOOL_PATH" -p "$PORT" read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_even
 
                 # 比较偶数扇区的数据和源数据
                 cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_even
