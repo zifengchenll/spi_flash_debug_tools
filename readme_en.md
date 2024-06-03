@@ -53,9 +53,11 @@ cd spi_flash_debug_tools/
 
 ## 使用说明
 
-使用帮助指令，打印各个命令行的用途：（./debug_cmd.sh help）
+使用帮助指令，打印各个命令行的用途
 
 ```
+./debug_cmd.sh help
+
 ##########################################################
 用法: ./debug_cmd.sh [命令] [选项]
 ##########################################################
@@ -67,6 +69,7 @@ cd spi_flash_debug_tools/
   help                      显示帮助信息
 
 选项:
+  -p <port>                指定串口设备，默认为 /dev/ttyUSB0
 
 说明:如果输入的参数命令不存在，则会传递给 esptool.py
 示例:
@@ -79,6 +82,72 @@ cd spi_flash_debug_tools/
   write_flash_status --bytes 2 --non-volatile 0                       --bytes决定了写入多少个状态寄存器字节，分别对应WRSR(01h)，WRSR2(31h)，WRSR3(11h)
   read_flash_status  --bytes 2                                        --bytes决定了读取多少个状态寄存器字节，分别对应RDSR(05h)，RDSR2(35h)，RDSR3(15h)
 
+```
+
+进行单扇区擦写校验测试模型
+
+```
+./debug_cmd.sh single_read_write_check
+```
+
+进行EECO测试模型
+
+```
+./debug_cmd.sh eeco
+```
+
+进行EOCE测试模型
+
+```
+./debug_cmd.sh eoce
+```
+
+读取FLASHID
+
+```
+./debug_cmd.sh flash_id
+```
+
+整片硬存擦除，可以显示擦除耗时
+
+```
+./debug_cmd.sh erase_flash
+```
+
+要擦除硬存的某个区域，起始地址是0x20000，长度为0x4000字节
+
+```
+./debug_cmd.sh erase_region 0x20000 0x4000
+```
+
+将二进制数据通过/dev/ttyUSB0写入硬存，写入地址0x1000开始
+
+```
+./debug_cmd.sh -p /dev/ttyUSB0 write_flash 0x1000 ./flash_bin/zero_4k_file
+```
+
+将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度0x200000，保存的文件名flash_contents.bin
+
+```
+./debug_cmd.sh -p /dev/ttyUSB0 -b 460800 read_flash 0 0x200000 flash_contents.bin
+```
+
+将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度硬存容量，保存的文件名flash_contents.bin
+
+```
+./debug_cmd.sh -p /dev/ttyUSB0 -b 460800 read_flash 0 ALL flash_contents.bin
+```
+
+写状态寄存器， --bytes决定了写入多少个状态寄存器字节，分别对应WRSR(01h)，WRSR2(31h)，WRSR3(11h)
+
+```
+./debug_cmd.sh write_flash_status --bytes 2 --non-volatile 0
+```
+
+读状态寄存器，--bytes决定了读取多少个状态寄存器字节，分别对应RDSR(05h)，RDSR2(35h)，RDSR3(15h)
+
+```
+./debug_cmd.sh read_flash_status  --bytes 2
 ```
 
 ## 测试说明
