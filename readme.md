@@ -118,4 +118,4 @@ cd spi_flash_debug_tools/
 
 ## 参考文献
 
-- [乐鑫驱动：git@github.com:espressif/esptool.git](git@github.com:espressif/esptool.git)
+- [乐鑫驱动：https://github.com/espressif/esptool](https://github.com/espressif/esptool)
