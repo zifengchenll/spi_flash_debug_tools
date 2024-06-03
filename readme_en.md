@@ -1,7 +1,7 @@
 
-# Circular Buffer Open Source C Library
+# SPI FLASH 分析工具
 
-![Project Logo](docs/images/project_logo.png)
+![项目Logo](docs/images/project_logo.png)
 
 ![GitHub Top Language](https://img.shields.io/github/languages/top/zifengchenll/circular_buffer.svg)
 ![GitHub Language Count](https://img.shields.io/github/languages/count/zifengchenll/circular_buffer.svg)
@@ -12,112 +12,110 @@
 
 [English](readme_en.md) | [中文](./readme.md)
 
-Circular Buffer, also known as Circular Queue, is a fixed-size data structure that uses a single, fixed-size buffer as a circular structure. The fixed-size nature of the circular buffer makes its memory usage very efficient, avoiding the overhead and fragmentation issues of dynamic memory allocation, making it very suitable for resource-constrained embedded systems; its main feature is that when the end of the buffer is written full, new data will start overwriting old data from the beginning of the buffer (this repository also supports various strategy configurations).
+在物联网嵌入式设备场景中，存储非易失性数据，常见会使用SPI FLASH，对于SPI FLASH，我们需要有一个专用的分析工具，能够快速对FLASH进行数据分析，可以快速读取FLASH ID，辨识FLASH厂商、型号，支持对FLASH芯片进行擦除、写入、读取、校验功能。
 
-Circular buffers are widely used in scenarios where efficient handling of streaming data is required, such as audio streams, network packet processing, logging, etc. This repository provides a highly portable circular buffer library written in C, supporting multiple hardware platforms, including Linux and various common embedded platforms. The library features efficient read and write operations, implemented through pointers, without complex memory management;
-
-Supports multiple write strategy configurations, including overwriting old data and rejecting new data, allowing users to choose the most suitable writing method according to specific application scenarios; to ensure data consistency and thread safety in a multi-threaded environment, the library provides a lock mechanism strategy configuration, allowing users to enable or disable the lock mechanism to meet different synchronization needs; the library is designed with cross-platform requirements in mind, with high portability, and can run seamlessly on different hardware platforms, including Linux and various embedded platforms, making it easy to reuse in different projects;
+另外说明，为了遵循高效的原则，并且作者不希望去实时维护一份FLASH驱动，故我们的FLASH分析工具，会引用乐鑫提供的驱动工具。
 
 ------
 
-## Feature Specifications
+## 特性规格
 
-| Specification              | Description                                                         |
-| -------------------------- | ------------------------------------------------------------------- |
-| Supports multiple embedded hardware platforms | The C library supports cross-platform hardware, including Linux kernel, FreeRTOS, bare metal, etc., and is suitable for platforms including STM32, ESP32, ESP8266, BL602, BL616, RTL8720DN, W800, etc. |
-| Configurable data write strategy | When the write speed of the buffer is greater than the read speed, the traditional circular buffer will overflow. When the buffer is full, you can choose between overwriting old data or rejecting new data. The default configuration of the repository is to reject new data; you can adjust the write strategy by configuring CIRCULAR_BUFFER_OVERWRITE |
-| Configurable lock-free circular buffer | The circular buffer supports lock-free operation mode, configured by setting ENABLE_LOCK macro to 0, switching to lock-free mode. In single producer single consumer mode under the write-full reject new data strategy, it is recommended to use lock-free mode to minimize system overhead; in multi-threaded scenarios under the write-full overwrite old data strategy, locks must be used to ensure thread safety |
-| Configurable locked circular buffer | The circular buffer supports locked operation mode, configured by setting ENABLE_LOCK macro to 1, switching to locked mode. In locked mode, regardless of the write-full overwrite old data strategy or write-full reject new data strategy, it can ensure thread safety in multi-producer and multi-consumer multi-threaded scenarios |
+| 规格         | 详细描述                             |
+| ------------ | ------------------------------------ |
+| FLASH ID读取 | 读取FLASH ID，辨识厂商、型号         |
+| 擦除         | 支持整片擦除，支持指定区域擦除       |
+| 写入         | 数据或者文件，写入到FLASH指定区域    |
+| 读取         | 读取FLASH中的指定区域，保存成文件    |
+| 校验         | 通过数据写入和检验，监测数据的一致性 |
 
-## Implementation Principle
+## 实现原理
 
-The circular buffer uses a fixed-size array and two pointers: a head pointer and a tail pointer. These two pointers indicate the head and tail positions of the data in the buffer. The head pointer points to the position where the next read will occur, and the tail pointer points to the position where the next write will occur. When data is written, the tail pointer moves forward, and when data is read, the head pointer moves forward. When the tail pointer reaches the end of the buffer, it wraps around to the beginning, forming a circular structure. When the head pointer catches up with the tail pointer, it means the buffer is empty, and when the tail pointer catches up with the head pointer, it means the buffer is full.
+基于乐鑫的FLASH驱动工具，添加测试用例脚本，制作成一个专用于FLASH的分析工具
 
-## Usage
+## 安装步骤
 
-### Compilation and Build
+请按照以下步骤安装和配置项目：
 
-Run the following command to compile the project:
+克隆仓库：
 
-```
-make
-```
-
-### Example Program
-
-Run the example program:
-
-```
-cd ./bin && ./circular_buffer_example
+```bash
+git@github.com:zifengchenll/spi_flash_debug_tools.git
 ```
 
-### Unit Tests
+进入目录：
 
-Run the following command to compile the unit test program:
-
-```
-make run_tests
+```bash
+cd spi_flash_debug_tools/
 ```
 
-Run the unit test program:
+## 使用说明
+
+使用帮助指令，打印各个命令行的用途：（./debug_cmd.sh help）
 
 ```
-cd ./bin && ./run_tests
+##########################################################
+用法: ./debug_cmd.sh [命令] [选项]
+##########################################################
+
+命令:
+  single_read_write_check   遍历所有扇区，对每个扇区进行擦除、写入、读取、校验
+  eeco                      整片硬存擦除，写入全零，擦除偶数扇区，检查奇数扇区
+  eoce                      整片硬存擦除，写入全零，擦除奇数扇区，检查偶数扇区
+  help                      显示帮助信息
+
+选项:
+
+说明:如果输入的参数命令不存在，则会传递给 esptool.py
+示例:
+  flash_id                                                            读取FLASHID
+  erase_flash                                                         整片硬存擦除，可以显示擦除耗时
+  erase_region 0x20000 0x4000                                         要擦除硬存的某个区域，起始地址是0x20000，长度为0x4000字节
+  -p /dev/ttyUSB0 write_flash 0x1000 ./flash_bin/zero_4k_file         将二进制数据通过/dev/ttyUSB0写入硬存，写入地址0x1000开始
+  -p /dev/ttyUSB0 -b 460800 read_flash 0 0x200000 flash_contents.bin  将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度0x200000，保存的文件名flash_contents.bin
+  -p /dev/ttyUSB0 -b 460800 read_flash 0 ALL flash_contents.bin       将硬存中数据通过/dev/ttyUSB0串口读出，使用的波特率是460800，起始地址0，长度硬存容量，保存的文件名flash_contents.bin
+  write_flash_status --bytes 2 --non-volatile 0                       --bytes决定了写入多少个状态寄存器字节，分别对应WRSR(01h)，WRSR2(31h)，WRSR3(11h)
+  read_flash_status  --bytes 2                                        --bytes决定了读取多少个状态寄存器字节，分别对应RDSR(05h)，RDSR2(35h)，RDSR3(15h)
+
 ```
 
-View the test case results:
+## 测试说明
+
+支持的测试模型：
 
 ```
-test_case/test_circular_buffer.c:307:test_circular_buffer_init:PASS
-test_case/test_circular_buffer.c:308:test_circular_buffer_write_and_read:PASS
-test_case/test_circular_buffer.c:309:test_circular_buffer_full:PASS
-test_case/test_circular_buffer.c:310:test_circular_buffer_empty:PASS
-test_case/test_circular_buffer.c:311:test_circular_buffer_boundary:PASS
-test_case/test_circular_buffer.c:312:test_circular_buffer_random_operations:PASS
-test_case/test_circular_buffer.c:313:test_circular_buffer_stress_test:PASS
-test_case/test_circular_buffer.c:314:test_circular_buffer_concurrent:PASS
-
------------------------
-8 Tests 0 Failures 0 Ignored 
-OK
+./debug_cmd.sh eeco
+./debug_cmd.sh eoce
 ```
 
-## Project Structure
+## 项目结构
 
 ```bash
 .
-├── bin
-│   ├── circular_buffer_example  // Example executable
-│   └── run_tests                // Test executable
-├── circular_buffer
-│   ├── port                     // Platform-specific adaptation files
-│   └── src                      // Circular buffer source code
-├── circular_buffer_example
-│   └── example.c                // Example usage
+├── debug_cmd.sh
+├── debug_temp
 ├── docs
-│   ├── api                      // API documentation
-│   ├── images                   // Image resources
-│   └── reference_file           // Reference materials
-├── lib
-│   └── libcircular_buffer.a     // Static library
-├── license                      // License
-├── Makefile                     // Build file
+│   └── images
+├── flash_bin
+│   ├── zero_16mb_file
+│   ├── zero_1mb_file
+│   ├── zero_2mb_file
+│   ├── zero_4k_file
+│   ├── zero_4mb_file
+│   └── zero_8mb_file
+├── license
 ├── readme_en.md
 ├── readme.md
 ├── test_case
-│   └── test_circular_buffer.c   // Test cases
-└── tools                        // Tools
-    ├── doxygen                  // API documentation generator
-    ├── toolchain                // Cross-compilation toolchain for generating cross-platform lib
-    └── unity                    // Testing framework
+└── tools
+    ├── esptool
+    └── flash_id
+
 ```
 
-## Notes
+## 注意事项
 
-When the data write strategy is configured to overwrite old data mode, you must use locks for thread safety protection (except for bare metal, because there is no concept of multi-threading on bare metal platforms, so there is no need for lock protection).
+如果配置状态寄存器，一定要注意正确性，某些寄存器配置是非易失性的，可能产生永久影响
 
-## References
+## 参考文献
 
-- [Kernel implementation: https://github.com/torvalds/linux](https://github.com/torvalds/linux)
-- [Zhihu platform: https://zhuanlan.zhihu.com/p/534098236](https://zhuanlan.zhihu.com/p/534098236)
-- [Wikipedia: https://en.wikipedia.org/wiki/Circular_buffer](https://en.wikipedia.org/wiki/Circular_buffer)
+- [乐鑫驱动：git@github.com:espressif/esptool.git](git@github.com:espressif/esptool.git)
