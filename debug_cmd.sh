@@ -96,6 +96,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# 生成唯一标识符
+UNIQUE_ID=$(date +%s%N)
+
 # 对所有测试命令进行询问
 if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ]; then
     echo -e "\033[33m##########################################################
@@ -105,9 +108,9 @@ if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ 
     echo "2) 检测到错误时继续测试，完成后提供报告"
     read -p "请输入你的机制 (1 或 2): " choice
 
-    if [ "$choice" == "1" ]; then
+    if [ "$choice" == "1" ];then
         ERROR_HANDLING="exit"
-    elif [ "$choice" == "2" ]; then
+    elif [ "$choice" == "2" ];then
         ERROR_HANDLING="record"
     else
         echo -e "\033[31m##########################################################
@@ -117,7 +120,7 @@ if [ "$COMMAND" == "single_read_write_check" ] || [ "$COMMAND" == "eeco" ] || [ 
     fi
 fi
 
-if [ -n "$COMMAND" ]; then
+if [ -n "$COMMAND" ];then
     echo -e "\033[34m##########################################################
 读取 Flash 大小
 ##########################################################\033[0m"
@@ -125,7 +128,7 @@ if [ -n "$COMMAND" ]; then
     FLASH_SIZE_LINE=$(echo "$FLASH_SIZE_OUTPUT" | grep "Detected flash size")
     FLASH_SIZE=$(echo "$FLASH_SIZE_LINE" | grep -oP '\d+MB')
 
-    if [ -z "$FLASH_SIZE" ]; then
+    if [ -z "$FLASH_SIZE" ];then
         echo -e "\033[31m##########################################################
 错误：无法检测到 Flash 大小
 ##########################################################\033[0m"
@@ -165,7 +168,7 @@ if [ -n "$COMMAND" ]; then
     START_ADDR=0x00000
     CHUNK_SIZE=0x1000 # 4K
 
-    if [ "$COMMAND" == "single_read_write_check" ]; then
+    if [ "$COMMAND" == "single_read_write_check" ];then
         echo -e "\033[34m##########################################################
 开始单扇区读写检查
 ##########################################################\033[0m"
@@ -174,7 +177,7 @@ if [ -n "$COMMAND" ]; then
         END_ADDR=$((START_ADDR + SIZE))
 
         # 逐个4K空间进行擦除、写入和读取数据
-        for ((ADDR = START_ADDR; ADDR < END_ADDR; ADDR += CHUNK_SIZE)); do
+        for ((ADDR = START_ADDR; ADDR < END_ADDR; ADDR += CHUNK_SIZE));do
             echo -e "\033[34m##########################################################
 擦除区域，起始地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
@@ -188,12 +191,12 @@ if [ -n "$COMMAND" ]; then
             echo -e "\033[34m##########################################################
 从 0x$(printf "%08X" $ADDR) 读取数据
 ##########################################################\033[0m"
-            python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read
+            python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_$UNIQUE_ID
 
             # 比较写入的数据和读回的数据
-            cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read
-            if [ $? -ne 0 ]; then
-                if [ "$ERROR_HANDLING" == "exit" ]; then
+            cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_$UNIQUE_ID
+            if [ $? -ne 0 ];then
+                if [ "$ERROR_HANDLING" == "exit" ];then
                     echo -e "\033[31m##########################################################
 错误：地址 0x$(printf "%08X" $ADDR) 处数据不匹配
 ##########################################################\033[0m"
@@ -212,7 +215,7 @@ if [ -n "$COMMAND" ]; then
         echo -e "\033[32m##########################################################
 单扇区读写检查模式：完成
 ##########################################################\033[0m"
-    elif [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ]; then
+    elif [ "$COMMAND" == "eeco" ] || [ "$COMMAND" == "eoce" ];then
         echo -e "\033[34m##########################################################
 擦除整个 Flash
 ##########################################################\033[0m"
@@ -223,7 +226,7 @@ if [ -n "$COMMAND" ]; then
 ##########################################################\033[0m"
         python "$ESPTOOL_PATH" -p $PORT write_flash $START_ADDR $ZERO_FILE
 
-        if [ "$COMMAND" == "eeco" ]; then
+        if [ "$COMMAND" == "eeco" ];then
             echo -e "\033[34m##########################################################
 开始 EECO 测试：擦除偶数扇区，检查奇数扇区
 ##########################################################\033[0m"
@@ -232,7 +235,7 @@ if [ -n "$COMMAND" ]; then
             END_ADDR=$((START_ADDR + SIZE))
 
             # 擦除偶数扇区
-            for ((ADDR = START_ADDR; ADDR < END_ADDR; ADDR += CHUNK_SIZE * 2)); do
+            for ((ADDR = START_ADDR;ADDR < END_ADDR;ADDR += CHUNK_SIZE * 2));do
                 echo -e "\033[34m##########################################################
 擦除偶数扇区，起始地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
@@ -240,16 +243,16 @@ if [ -n "$COMMAND" ]; then
             done
 
             # 检查奇数扇区
-            for ((ADDR = START_ADDR + CHUNK_SIZE; ADDR < END_ADDR; ADDR += CHUNK_SIZE * 2)); do
+            for ((ADDR = START_ADDR + CHUNK_SIZE;ADDR < END_ADDR;ADDR += CHUNK_SIZE * 2));do
                 echo -e "\033[34m##########################################################
 读取奇数扇区数据，地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-                python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_odd
+                python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_odd_$UNIQUE_ID
 
                 # 比较奇数扇区的数据和源数据
-                cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_odd
-                if [ $? -ne 0 ]; then
-                    if [ "$ERROR_HANDLING" == "exit" ]; then
+                cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_odd_$UNIQUE_ID
+                if [ $? -ne 0 ];then
+                    if [ "$ERROR_HANDLING" == "exit" ];then
                         echo -e "\033[31m##########################################################
 错误：奇数扇区地址 0x$(printf "%08X" $ADDR) 处数据不匹配
 ##########################################################\033[0m"
@@ -267,7 +270,7 @@ if [ -n "$COMMAND" ]; then
             echo -e "\033[32m##########################################################
 EECO 测试模式：完成
 ##########################################################\033[0m"
-        elif [ "$COMMAND" == "eoce" ]; then
+        elif [ "$COMMAND" == "eoce" ];then
             echo -e "\033[34m##########################################################
 开始 EOCE 测试：擦除奇数扇区，检查偶数扇区
 ##########################################################\033[0m"
@@ -276,7 +279,7 @@ EECO 测试模式：完成
             END_ADDR=$((START_ADDR + SIZE))
 
             # 擦除奇数扇区
-            for ((ADDR = START_ADDR + CHUNK_SIZE; ADDR < END_ADDR; ADDR += CHUNK_SIZE * 2)); do
+            for ((ADDR = START_ADDR + CHUNK_SIZE;ADDR < END_ADDR;ADDR += CHUNK_SIZE * 2));do
                 echo -e "\033[34m##########################################################
 擦除奇数扇区，起始地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
@@ -284,16 +287,16 @@ EECO 测试模式：完成
             done
 
             # 检查偶数扇区
-            for ((ADDR = START_ADDR; ADDR < END_ADDR; ADDR += CHUNK_SIZE * 2)); do
+            for ((ADDR = START_ADDR;ADDR < END_ADDR;ADDR += CHUNK_SIZE * 2));do
                 echo -e "\033[34m##########################################################
 读取偶数扇区数据，地址 0x$(printf "%08X" $ADDR)
 ##########################################################\033[0m"
-                python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_even
+                python "$ESPTOOL_PATH" -p $PORT read_flash $ADDR $CHUNK_SIZE ./debug_temp/zero_4k_file_read_even_$UNIQUE_ID
 
                 # 比较偶数扇区的数据和源数据
-                cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_even
-                if [ $? -ne 0 ]; then
-                    if [ "$ERROR_HANDLING" == "exit" ]; then
+                cmp ./flash_bin/zero_4k_file ./debug_temp/zero_4k_file_read_even_$UNIQUE_ID
+                if [ $? -ne 0 ];then
+                    if [ "$ERROR_HANDLING" == "exit" ];then
                         echo -e "\033[31m##########################################################
 错误：偶数扇区地址 0x$(printf "%08X" $ADDR) 处数据不匹配
 ##########################################################\033[0m"
@@ -315,11 +318,11 @@ EOCE 测试模式：完成
     fi
 
     # 如果选择了记录错误模式，输出错误扇区地址
-    if [ "$ERROR_HANDLING" == "record" ] && [ ${#ERROR_SECTORS[@]} -ne 0 ]; then
+    if [ "$ERROR_HANDLING" == "record" ] && [ ${#ERROR_SECTORS[@]} -ne 0 ];then
         echo -e "\033[31m##########################################################
 在以下扇区检测到错误:
 ##########################################################\033[0m"
-        for sector in "${ERROR_SECTORS[@]}"; do
+        for sector in "${ERROR_SECTORS[@]}";do
             printf "\033[31m扇区: 0x%08X\033[0m\n" $sector
         done
     fi
