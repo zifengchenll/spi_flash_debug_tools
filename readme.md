@@ -3,12 +3,12 @@
 
 ![项目Logo](docs/images/project_logo.png)
 
-![GitHub Top Language](https://img.shields.io/github/languages/top/zifengchenll/circular_buffer.svg)
-![GitHub Language Count](https://img.shields.io/github/languages/count/zifengchenll/circular_buffer.svg)
-![GitHub Release](https://img.shields.io/github/license/zifengchenll/circular_buffer.svg)
-![GitHub Release](https://img.shields.io/github/repo-size/zifengchenll/circular_buffer.svg)
-![GitHub Release](https://img.shields.io/github/last-commit/zifengchenll/circular_buffer.svg)
-![GitHub Release](https://img.shields.io/github/v/release/zifengchenll/circular_buffer.svg)
+![GitHub Top Language](https://img.shields.io/github/languages/top/zifengchenll/spi_flash_debug_tools.svg)
+![GitHub Language Count](https://img.shields.io/github/languages/count/zifengchenll/spi_flash_debug_tools.svg)
+![GitHub Release](https://img.shields.io/github/license/zifengchenll/spi_flash_debug_tools.svg)
+![GitHub Release](https://img.shields.io/github/repo-size/zifengchenll/spi_flash_debug_tools.svg)
+![GitHub Release](https://img.shields.io/github/last-commit/zifengchenll/spi_flash_debug_tools.svg)
+![GitHub Release](https://img.shields.io/github/v/release/zifengchenll/spi_flash_debug_tools.svg)
 
 [English](readme_en.md) | [中文](./readme.md)
 
